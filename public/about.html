@@ -1,114 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About - Image Switcher</title>
-  <link rel="stylesheet" href="css/about.css">
-</head>
-<body>
-  <a href="/" class="back-link">&larr; Control Surface に戻る</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About - Image Switcher</title>
+    <link rel="stylesheet" href="css/about.css" />
+  </head>
+  <body>
+    <a href="/" class="back-link">&larr; Control Surface に戻る</a>
 
-  <h1 id="app-name">Image Switcher</h1>
-  <p class="app-version" id="app-version"></p>
+    <h1 id="app-name">Image Switcher</h1>
+    <p class="app-version" id="app-version"></p>
 
-  <div class="section" id="app-license-section">
-    <h2>アプリケーションライセンス</h2>
-    <div id="app-license"></div>
-  </div>
-
-  <div class="section">
-    <h2>使用パッケージ</h2>
-    <div id="dep-list">
-      <p class="loading">読み込み中...</p>
+    <div class="section" id="app-license-section">
+      <h2>アプリケーションライセンス</h2>
+      <div id="app-license"></div>
     </div>
-  </div>
 
-  <script>
-    function createCard(name, version, license, author, text) {
-      const card = document.createElement('div');
-      card.className = 'license-card';
+    <div class="section">
+      <h2>使用パッケージ</h2>
+      <div id="dep-list">
+        <p class="loading">読み込み中...</p>
+      </div>
+    </div>
 
-      const header = document.createElement('div');
-      header.className = 'license-header';
+    <script>
+      function createCard(name, version, license, author, text) {
+        const card = document.createElement("div");
+        card.className = "license-card";
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'license-name';
-      nameSpan.textContent = name;
-      header.appendChild(nameSpan);
+        const header = document.createElement("div");
+        header.className = "license-header";
 
-      const meta = document.createElement('div');
-      meta.className = 'license-meta';
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "license-name";
+        nameSpan.textContent = name;
+        header.appendChild(nameSpan);
 
-      if (author) {
-        const authorSpan = document.createElement('span');
-        authorSpan.textContent = author;
-        meta.appendChild(authorSpan);
+        const meta = document.createElement("div");
+        meta.className = "license-meta";
+
+        if (author) {
+          const authorSpan = document.createElement("span");
+          authorSpan.textContent = author;
+          meta.appendChild(authorSpan);
+        }
+
+        const versionSpan = document.createElement("span");
+        versionSpan.textContent = "v" + version;
+        meta.appendChild(versionSpan);
+
+        const licenseSpan = document.createElement("span");
+        licenseSpan.textContent = license;
+        meta.appendChild(licenseSpan);
+
+        if (text) {
+          const toggle = document.createElement("span");
+          toggle.className = "license-toggle";
+          toggle.textContent = "\u25B6";
+          meta.appendChild(toggle);
+        }
+
+        header.appendChild(meta);
+        card.appendChild(header);
+
+        if (text) {
+          const body = document.createElement("div");
+          body.className = "license-body";
+          const pre = document.createElement("pre");
+          pre.textContent = text;
+          body.appendChild(pre);
+          card.appendChild(body);
+
+          header.addEventListener("click", () => {
+            card.classList.toggle("open");
+          });
+        }
+
+        return card;
       }
 
-      const versionSpan = document.createElement('span');
-      versionSpan.textContent = 'v' + version;
-      meta.appendChild(versionSpan);
+      async function init() {
+        const res = await fetch("/licenses.json");
+        const data = await res.json();
 
-      const licenseSpan = document.createElement('span');
-      licenseSpan.textContent = license;
-      meta.appendChild(licenseSpan);
+        document.getElementById("app-version").textContent =
+          "v" + data.app.version + " \u2014 " + data.app.license + " License";
 
-      if (text) {
-        const toggle = document.createElement('span');
-        toggle.className = 'license-toggle';
-        toggle.textContent = '\u25B6';
-        meta.appendChild(toggle);
+        const appLicenseEl = document.getElementById("app-license");
+        appLicenseEl.appendChild(
+          createCard(data.app.name, data.app.version, data.app.license, "", data.app.licenseText),
+        );
+
+        const depEl = document.getElementById("dep-list");
+        depEl.textContent = "";
+
+        if (data.dependencies.length === 0) {
+          const p = document.createElement("p");
+          p.className = "loading";
+          p.textContent = "依存パッケージはありません";
+          depEl.appendChild(p);
+          return;
+        }
+
+        for (const d of data.dependencies) {
+          depEl.appendChild(createCard(d.name, d.version, d.license, d.author, d.licenseText));
+        }
       }
 
-      header.appendChild(meta);
-      card.appendChild(header);
-
-      if (text) {
-        const body = document.createElement('div');
-        body.className = 'license-body';
-        const pre = document.createElement('pre');
-        pre.textContent = text;
-        body.appendChild(pre);
-        card.appendChild(body);
-
-        header.addEventListener('click', () => {
-          card.classList.toggle('open');
-        });
-      }
-
-      return card;
-    }
-
-    async function init() {
-      const res = await fetch('/licenses.json');
-      const data = await res.json();
-
-      document.getElementById('app-version').textContent =
-        'v' + data.app.version + ' \u2014 ' + data.app.license + ' License';
-
-      const appLicenseEl = document.getElementById('app-license');
-      appLicenseEl.appendChild(
-        createCard(data.app.name, data.app.version, data.app.license, '', data.app.licenseText)
-      );
-
-      const depEl = document.getElementById('dep-list');
-      depEl.textContent = '';
-
-      if (data.dependencies.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'loading';
-        p.textContent = '依存パッケージはありません';
-        depEl.appendChild(p);
-        return;
-      }
-
-      for (const d of data.dependencies) {
-        depEl.appendChild(createCard(d.name, d.version, d.license, d.author, d.licenseText));
-      }
-    }
-
-    init();
-  </script>
-</body>
+      init();
+    </script>
+  </body>
 </html>

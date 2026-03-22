@@ -1,4 +1,8 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 :root {
   --bg: #1a1a1a;
@@ -12,15 +16,23 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   line-height: 1.6;
   padding: 24px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
 
 .back-link {
   display: inline-block;
@@ -108,7 +120,7 @@ h1 {
   color: var(--text-dim);
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: ui-monospace, 'SF Mono', monospace;
+  font-family: ui-monospace, "SF Mono", monospace;
   line-height: 1.5;
 }
 

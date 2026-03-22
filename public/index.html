@@ -1,52 +1,91 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Switcher - Control Surface</title>
-  <link rel="stylesheet" href="css/control.css">
-</head>
-<body>
-  <header id="toolbar">
-    <div id="person-tabs">
-      <button class="tab active" data-person="all">ALL<span class="key">0</span></button>
-    </div>
-    <div id="actions">
-      <a href="about.html" class="action-btn pgm-btn" id="btn-about" title="About">ⓘ</a>
-      <button id="btn-open-pgm" class="action-btn pgm-btn">Open PGM</button>
-      <button id="btn-black" class="action-btn black-btn">BLACK<span class="key">B</span></button>
-      <button id="btn-take" class="action-btn take-btn">TAKE<span class="key">Space</span></button>
-    </div>
-  </header>
-
-  <main id="workspace">
-    <aside id="monitors">
-      <div id="preview-section">
-        <div class="monitor-label">PREVIEW</div>
-        <div id="preview-container">
-          <img id="preview-img" alt="">
-          <div id="preview-placeholder">Click a thumbnail</div>
-          <div id="preview-loading" class="hidden">Loading...</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Switcher - Control Surface</title>
+    <link rel="stylesheet" href="css/control.css" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <div id="toolbar-left">
+        <div id="workspace-selector">
+          <select id="workspace-select"></select>
+          <button id="btn-ws-add" class="ws-btn" title="Add workspace">+</button>
+          <button id="btn-ws-manage" class="ws-btn" title="Manage workspaces">⚙</button>
         </div>
-        <div id="preview-filename"></div>
-      </div>
-      <div class="resize-handle resize-handle-v" id="handle-v"></div>
-      <div id="pgm-section">
-        <div class="monitor-label on-air">PROGRAM</div>
-        <div id="pgm-container">
-          <img id="pgm-img" alt="">
-          <div id="pgm-placeholder">No output</div>
+        <div id="person-tabs">
+          <button class="tab active" data-person="all">ALL<span class="key">0</span></button>
         </div>
-        <div id="pgm-filename"></div>
       </div>
-    </aside>
-    <div class="resize-handle resize-handle-h" id="handle-h"></div>
-    <section id="grid-area">
-      <div id="thumb-grid"></div>
-    </section>
-  </main>
+      <div id="actions">
+        <a href="about.html" class="action-btn pgm-btn" id="btn-about" title="About">ⓘ</a>
+        <button id="btn-open-pgm" class="action-btn pgm-btn">Open PGM</button>
+        <button id="btn-black" class="action-btn black-btn">BLACK<span class="key">B</span></button>
+        <button id="btn-take" class="action-btn take-btn">
+          TAKE<span class="key">Space</span>
+        </button>
+      </div>
+    </header>
 
-  <script src="js/channel.js"></script>
-  <script src="js/control.js"></script>
-</body>
+    <main id="workspace">
+      <aside id="monitors">
+        <div id="preview-section">
+          <div class="monitor-label">PREVIEW</div>
+          <div id="preview-container">
+            <img id="preview-img" alt="" />
+            <div id="preview-placeholder">Click a thumbnail</div>
+            <div id="preview-loading" class="hidden">Loading...</div>
+          </div>
+          <div id="preview-filename"></div>
+        </div>
+        <div class="resize-handle resize-handle-v" id="handle-v"></div>
+        <div id="pgm-section">
+          <div class="monitor-label on-air">PROGRAM</div>
+          <div id="pgm-container">
+            <img id="pgm-img" alt="" />
+            <div id="pgm-placeholder">No output</div>
+          </div>
+          <div id="pgm-filename"></div>
+        </div>
+      </aside>
+      <div class="resize-handle resize-handle-h" id="handle-h"></div>
+      <section id="grid-area">
+        <div id="thumb-grid"></div>
+      </section>
+    </main>
+
+    <dialog id="ws-dialog">
+      <h2>Workspace Management</h2>
+      <div id="ws-list"></div>
+      <form id="ws-add-form">
+        <h3>Add Workspace</h3>
+        <label>Name <input type="text" id="ws-name" required /></label>
+        <label>Path</label>
+        <div id="ws-path-row">
+          <input type="text" id="ws-path" required placeholder="/absolute/path/to/images" />
+          <button type="button" id="btn-ws-browse" class="ws-btn">Browse</button>
+        </div>
+        <div class="ws-form-actions">
+          <button type="submit" class="ws-btn-primary">Add</button>
+          <button type="button" id="btn-ws-close" class="ws-btn-secondary">Close</button>
+        </div>
+      </form>
+      <div id="ws-error" class="ws-error hidden"></div>
+    </dialog>
+
+    <dialog id="ws-browse-dialog">
+      <h2>Select Folder</h2>
+      <div id="browse-current-path"></div>
+      <div id="browse-list"></div>
+      <div class="ws-form-actions">
+        <button type="button" id="btn-browse-select" class="ws-btn-primary">
+          Select This Folder
+        </button>
+        <button type="button" id="btn-browse-cancel" class="ws-btn-secondary">Cancel</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="js/control.ts"></script>
+  </body>
 </html>

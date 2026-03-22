@@ -1,3 +1,5 @@
 node_modules/
 .thumbnails/
 public/licenses.json
+dist/
+workspaces.json

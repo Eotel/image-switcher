@@ -1,4 +1,9 @@
 pre-commit:
+  parallel: true
   jobs:
     - name: license-check
       run: npx license-checker-rseidelsohn --production --failOn 'GPL-2.0;GPL-3.0;AGPL-3.0'
+    - name: lint-and-format
+      run: npx vp check
+    - name: type-check
+      run: npx vp lint --type-check --type-aware

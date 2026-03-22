@@ -107,7 +107,7 @@ function loadViewPrefs(): ViewPrefs {
   } catch {
     /* localStorage unavailable */
   }
-  return { viewMode: "grid", thumbSize: 120, layoutMode: "vertical" };
+  return { viewMode: "grid", thumbSize: 120, layoutMode: "horizontal" };
 }
 
 function updateViewModeUI(isList: boolean): void {
@@ -122,6 +122,7 @@ function setLayoutMode(mode: "vertical" | "horizontal"): void {
   const isHorizontal = mode === "horizontal";
   document.body.classList.toggle("layout-horizontal", isHorizontal);
   btnLayoutToggle.classList.toggle("active", isHorizontal);
+  btnLayoutToggle.title = isHorizontal ? "Vertical layout (L)" : "Horizontal layout (L)";
 
   const monitors = document.getElementById("monitors")!;
   const previewSection = document.getElementById("preview-section")!;

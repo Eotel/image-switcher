@@ -106,9 +106,7 @@ body {
   min-width: 340px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   padding: 8px;
-  border-right: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -272,6 +270,31 @@ body {
   color: var(--text-dim);
   font-size: 14px;
 }
+
+/* Resize handles */
+.resize-handle {
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+  z-index: 10;
+}
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--text-dim);
+}
+.resize-handle-h {
+  width: 6px;
+  cursor: col-resize;
+}
+.resize-handle-v {
+  height: 6px;
+  cursor: row-resize;
+  margin: 4px 0;
+}
+body.resizing-h { cursor: col-resize !important; }
+body.resizing-v { cursor: row-resize !important; }
+body.resizing-h *,
+body.resizing-v * { cursor: inherit !important; }
 
 /* Scrollbar styling */
 #grid-area::-webkit-scrollbar {

@@ -60,6 +60,7 @@ const pgmImg = document.getElementById("pgm-img") as HTMLImageElement;
 const pgmPlaceholder = document.getElementById("pgm-placeholder")!;
 const pgmFilename = document.getElementById("pgm-filename")!;
 const personTabs = document.getElementById("person-tabs")!;
+const toolbarLeft = document.getElementById("toolbar-left")!;
 const btnTake = document.getElementById("btn-take")!;
 const btnBlack = document.getElementById("btn-black")!;
 const btnOpenPgm = document.getElementById("btn-open-pgm")!;
@@ -380,6 +381,13 @@ async function init(): Promise<void> {
   refreshVisibleThumbs();
 }
 
+function updateTabsOverflow(): void {
+  const hasOverflow =
+    personTabs.scrollWidth > personTabs.clientWidth &&
+    personTabs.scrollLeft + personTabs.clientWidth < personTabs.scrollWidth - 1;
+  toolbarLeft.classList.toggle("has-overflow-right", hasOverflow);
+}
+
 function renderTabs(): void {
   if (!manifest) return;
 
@@ -395,6 +403,8 @@ function renderTabs(): void {
     btn.appendChild(createKeyBadge(String(person.index)));
     personTabs.appendChild(btn);
   }
+
+  updateTabsOverflow();
 }
 
 function renderGrid(): void {
@@ -615,6 +625,8 @@ personTabs.addEventListener("click", (e) => {
   if (!tab) return;
   filterPerson(tab.dataset.person!);
 });
+
+personTabs.addEventListener("scroll", updateTabsOverflow);
 
 btnTake.addEventListener("click", take);
 btnBlack.addEventListener("click", blackOut);

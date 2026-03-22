@@ -34,6 +34,12 @@ body {
   font-size: 24px;
   cursor: pointer;
   z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#overlay:hover {
+  opacity: 1;
 }
 
 #overlay.hidden {

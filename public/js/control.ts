@@ -11,14 +11,14 @@ interface ManifestCategory {
   images: ManifestImage[];
 }
 
-interface ManifestPerson {
+interface ManifestGroup {
   name: string;
   index: number;
   categories: ManifestCategory[];
 }
 
 interface Manifest {
-  people: ManifestPerson[];
+  groups: ManifestGroup[];
 }
 
 interface ViewPrefs {
@@ -61,7 +61,7 @@ const previewFilename = document.getElementById("preview-filename")!;
 const pgmImg = document.getElementById("pgm-img") as HTMLImageElement;
 const pgmPlaceholder = document.getElementById("pgm-placeholder")!;
 const pgmFilename = document.getElementById("pgm-filename")!;
-const personTabs = document.getElementById("person-tabs")!;
+const groupTabs = document.getElementById("group-tabs")!;
 const toolbarLeft = document.getElementById("toolbar-left")!;
 const btnTake = document.getElementById("btn-take")!;
 const btnBlack = document.getElementById("btn-black")!;
@@ -187,13 +187,13 @@ function createKeyBadge(text: string): HTMLSpanElement {
 
 function buildEncodedPath(
   prefix: string,
-  personName: string,
+  groupName: string,
   categoryName: string,
   filename: string,
 ): string {
   return (
     prefix +
-    encodeURIComponent(personName) +
+    encodeURIComponent(groupName) +
     "/" +
     encodeURIComponent(categoryName) +
     "/" +
@@ -203,8 +203,8 @@ function buildEncodedPath(
 
 function refreshVisibleThumbs(): void {
   cachedVisibleThumbs = allThumbElements.filter((el) => {
-    const section = el.closest(".person-section");
-    return section && !section.classList.contains("hidden-person");
+    const section = el.closest(".group-section");
+    return section && !section.classList.contains("hidden-group");
   });
 }
 
@@ -417,25 +417,25 @@ async function init(): Promise<void> {
 
 function updateTabsOverflow(): void {
   const hasOverflow =
-    personTabs.scrollWidth > personTabs.clientWidth &&
-    personTabs.scrollLeft + personTabs.clientWidth < personTabs.scrollWidth - 1;
+    groupTabs.scrollWidth > groupTabs.clientWidth &&
+    groupTabs.scrollLeft + groupTabs.clientWidth < groupTabs.scrollWidth - 1;
   toolbarLeft.classList.toggle("has-overflow-right", hasOverflow);
 }
 
 function renderTabs(): void {
   if (!manifest) return;
 
-  const allBtn = personTabs.querySelector<HTMLElement>('[data-person="all"]')!;
-  personTabs.replaceChildren(allBtn);
+  const allBtn = groupTabs.querySelector<HTMLElement>('[data-group="all"]')!;
+  groupTabs.replaceChildren(allBtn);
   allBtn.classList.add("active");
 
-  for (const person of manifest.people) {
+  for (const group of manifest.groups) {
     const btn = document.createElement("button");
     btn.className = "tab";
-    btn.dataset.person = person.name;
-    btn.textContent = person.name;
-    btn.appendChild(createKeyBadge(String(person.index)));
-    personTabs.appendChild(btn);
+    btn.dataset.group = group.name;
+    btn.textContent = group.name;
+    btn.appendChild(createKeyBadge(String(group.index)));
+    groupTabs.appendChild(btn);
   }
 
   updateTabsOverflow();
@@ -445,17 +445,17 @@ function renderGrid(): void {
   if (!manifest) return;
   thumbGrid.replaceChildren();
 
-  for (const person of manifest.people) {
+  for (const group of manifest.groups) {
     const section = document.createElement("div");
-    section.className = "person-section";
-    section.dataset.person = person.name;
+    section.className = "group-section";
+    section.dataset.group = group.name;
 
-    const personHeader = document.createElement("div");
-    personHeader.className = "person-header";
-    personHeader.textContent = person.name;
-    section.appendChild(personHeader);
+    const groupHeader = document.createElement("div");
+    groupHeader.className = "group-header";
+    groupHeader.textContent = group.name;
+    section.appendChild(groupHeader);
 
-    for (const category of person.categories) {
+    for (const category of group.categories) {
       const catHeader = document.createElement("div");
       catHeader.className = "category-header";
       catHeader.textContent = category.name;
@@ -469,14 +469,14 @@ function renderGrid(): void {
         item.className = "thumb-item";
         item.dataset.imageUrl = buildEncodedPath(
           "/images/",
-          person.name,
+          group.name,
           category.name,
           image.filename,
         );
-        item.dataset.person = person.name;
+        item.dataset.group = group.name;
 
         const img = document.createElement("img");
-        img.src = buildEncodedPath("/thumbnails/", person.name, category.name, image.filename);
+        img.src = buildEncodedPath("/thumbnails/", group.name, category.name, image.filename);
         img.alt = image.filename;
         img.loading = "lazy";
         item.appendChild(img);
@@ -585,16 +585,16 @@ function blackOut(): void {
   channel.postMessage({ type: "black" } satisfies ChannelMessage);
 }
 
-function filterPerson(personName: string): void {
+function filterGroup(groupName: string): void {
   document.querySelectorAll<HTMLElement>(".tab").forEach((t) => {
-    t.classList.toggle("active", t.dataset.person === personName);
+    t.classList.toggle("active", t.dataset.group === groupName);
   });
 
-  document.querySelectorAll<HTMLElement>(".person-section").forEach((s) => {
-    if (personName === "all") {
-      s.classList.remove("hidden-person");
+  document.querySelectorAll<HTMLElement>(".group-section").forEach((s) => {
+    if (groupName === "all") {
+      s.classList.remove("hidden-group");
     } else {
-      s.classList.toggle("hidden-person", s.dataset.person !== personName);
+      s.classList.toggle("hidden-group", s.dataset.group !== groupName);
     }
   });
 
@@ -654,13 +654,13 @@ thumbGrid.addEventListener("dblclick", (e) => {
   take();
 });
 
-personTabs.addEventListener("click", (e) => {
+groupTabs.addEventListener("click", (e) => {
   const tab = (e.target as HTMLElement).closest<HTMLElement>(".tab");
   if (!tab) return;
-  filterPerson(tab.dataset.person!);
+  filterGroup(tab.dataset.group!);
 });
 
-personTabs.addEventListener("scroll", updateTabsOverflow);
+groupTabs.addEventListener("scroll", updateTabsOverflow);
 
 btnTake.addEventListener("click", take);
 btnBlack.addEventListener("click", blackOut);
@@ -714,7 +714,7 @@ document.addEventListener("keydown", (e) => {
       navigateThumbs("up");
       break;
     case "0":
-      filterPerson("all");
+      filterGroup("all");
       break;
     case "1":
     case "2":
@@ -722,8 +722,8 @@ document.addEventListener("keydown", (e) => {
     case "4":
     case "5": {
       const idx = parseInt(e.key) - 1;
-      if (manifest && manifest.people[idx]) {
-        filterPerson(manifest.people[idx].name);
+      if (manifest && manifest.groups[idx]) {
+        filterGroup(manifest.groups[idx].name);
       }
       break;
     }

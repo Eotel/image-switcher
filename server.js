@@ -11,14 +11,14 @@ const THUMB_BASE = path.resolve(__dirname, ".thumbnails");
 // --- Mutable state: swapped on workspace activation ---
 let activeImageRoot = "";
 let activeThumbRoot = "";
-let activeManifest = { people: [] };
+let activeManifest = { groups: [] };
 let imageMiddleware = (_req, _res, next) => next();
 let thumbMiddleware = (_req, _res, next) => next();
 
 // --- Manifest & thumbnail helpers (parameterized) ---
 
 function buildManifest(imageRoot) {
-  const people = [];
+  const groups = [];
 
   let entries;
   try {
@@ -27,27 +27,27 @@ function buildManifest(imageRoot) {
       .filter((d) => d.isDirectory())
       .sort((a, b) => a.name.localeCompare(b.name, "ja"));
   } catch {
-    return { people: [] };
+    return { groups: [] };
   }
 
-  for (const personDir of entries) {
-    const personPath = path.join(imageRoot, personDir.name);
+  for (const groupDir of entries) {
+    const groupPath = path.join(imageRoot, groupDir.name);
     const categories = [];
 
     const catEntries = fs
-      .readdirSync(personPath, { withFileTypes: true })
+      .readdirSync(groupPath, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
     for (const catDir of catEntries) {
-      const catPath = path.join(personPath, catDir.name);
+      const catPath = path.join(groupPath, catDir.name);
       const images = fs
         .readdirSync(catPath)
         .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
         .sort()
         .map((filename) => ({
           filename,
-          path: `${personDir.name}/${catDir.name}/${filename}`,
+          path: `${groupDir.name}/${catDir.name}/${filename}`,
         }));
 
       if (images.length > 0) {
@@ -56,15 +56,15 @@ function buildManifest(imageRoot) {
     }
 
     if (categories.length > 0) {
-      people.push({
-        name: personDir.name,
-        index: people.length + 1,
+      groups.push({
+        name: groupDir.name,
+        index: groups.length + 1,
         categories,
       });
     }
   }
 
-  return { people };
+  return { groups };
 }
 
 async function generateThumbnails(manifest, imageRoot, thumbRoot) {
@@ -73,8 +73,8 @@ async function generateThumbnails(manifest, imageRoot, thumbRoot) {
   let skipped = 0;
 
   const tasks = [];
-  for (const person of manifest.people) {
-    for (const category of person.categories) {
+  for (const group of manifest.groups) {
+    for (const category of group.categories) {
       for (const image of category.images) {
         tasks.push(image.path);
       }
@@ -133,11 +133,11 @@ async function activateWorkspace(workspace) {
   console.log("  Building manifest...");
   activeManifest = buildManifest(activeImageRoot);
 
-  const totalImages = activeManifest.people.reduce(
+  const totalImages = activeManifest.groups.reduce(
     (sum, p) => sum + p.categories.reduce((s, c) => s + c.images.length, 0),
     0,
   );
-  console.log(`  Found ${activeManifest.people.length} people, ${totalImages} images`);
+  console.log(`  Found ${activeManifest.groups.length} groups, ${totalImages} images`);
 
   console.log("  Generating thumbnails...");
   await generateThumbnails(activeManifest, activeImageRoot, activeThumbRoot);

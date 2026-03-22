@@ -103,7 +103,7 @@ body {
   color: var(--text);
 }
 
-#person-tabs {
+#group-tabs {
   display: flex;
   gap: 4px;
   overflow-x: auto;
@@ -355,15 +355,15 @@ body {
   padding: 8px;
 }
 
-.person-section {
+.group-section {
   margin-bottom: 16px;
 }
 
-.person-section.hidden-person {
+.group-section.hidden-group {
   display: none;
 }
 
-.person-header {
+.group-header {
   font-size: 12px;
   font-weight: bold;
   text-transform: uppercase;

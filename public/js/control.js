@@ -42,6 +42,84 @@
     });
   }
 
+  function getAvailableSize(section, container) {
+    var sectionH = section.clientHeight;
+    var siblings = section.children;
+    var usedH = 0;
+    for (var i = 0; i < siblings.length; i++) {
+      if (siblings[i] !== container) {
+        usedH += siblings[i].offsetHeight;
+        var style = getComputedStyle(siblings[i]);
+        usedH += parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+      }
+    }
+    return { w: section.clientWidth, h: Math.max(0, sectionH - usedH) };
+  }
+
+  function getRatio(imgOrRatio) {
+    if (typeof imgOrRatio === 'number') return imgOrRatio;
+    if (!imgOrRatio || !imgOrRatio.naturalWidth || !imgOrRatio.naturalHeight) return 0;
+    return imgOrRatio.naturalWidth / imgOrRatio.naturalHeight;
+  }
+
+  // Reset container to flex:1 before measuring available space, otherwise
+  // the container's own fixed dimensions constrain the parent's reported size.
+  function resetContainerForMeasure(container) {
+    container.style.flex = '1';
+    container.style.width = '';
+    container.style.height = '';
+  }
+
+  function applyContainerFit(container, ratio) {
+    var section = container.parentElement;
+    var avail = getAvailableSize(section, container);
+    if (avail.w <= 0 || avail.h <= 0) return;
+
+    var w, h;
+    if (avail.w / avail.h > ratio) {
+      h = avail.h;
+      w = h * ratio;
+    } else {
+      w = avail.w;
+      h = w / ratio;
+    }
+    container.style.flex = 'none';
+    container.style.width = Math.floor(w) + 'px';
+    container.style.height = Math.floor(h) + 'px';
+  }
+
+  function fitContainerToAspectRatio(container, imgOrRatio) {
+    var ratio = getRatio(imgOrRatio);
+    if (!ratio || !isFinite(ratio)) return;
+    resetContainerForMeasure(container);
+    applyContainerFit(container, ratio);
+  }
+
+  function clearContainerFit(container) {
+    container.style.width = '';
+    container.style.height = '';
+    container.style.flex = '';
+  }
+
+  // Batches write-read-write to minimise forced reflows:
+  // 1. reset all → 2. measure all → 3. apply all
+  function refitAllContainers() {
+    var targets = [];
+    if (previewImg.classList.contains('visible')) {
+      var r = getRatio(previewImg);
+      if (r && isFinite(r)) targets.push({ container: previewImg.parentElement, ratio: r });
+    }
+    if (pgmImg.classList.contains('visible')) {
+      var r2 = getRatio(pgmImg);
+      if (r2 && isFinite(r2)) targets.push({ container: pgmImg.parentElement, ratio: r2 });
+    }
+    if (targets.length === 0) return;
+    // batch reset (writes)
+    for (var i = 0; i < targets.length; i++) resetContainerForMeasure(targets[i].container);
+    // batch measure + apply (reads then writes)
+    for (var j = 0; j < targets.length; j++) applyContainerFit(targets[j].container, targets[j].ratio);
+  }
+
   async function init() {
     const res = await fetch('/api/manifest');
     manifest = await res.json();
@@ -126,6 +204,7 @@
       previewImg.src = imageUrl;
       previewImg.classList.add('visible');
       previewLoading.classList.add('hidden');
+      fitContainerToAspectRatio(previewImg.parentElement, loader);
     };
     loader.onerror = function () {
       previewLoading.textContent = 'Load failed';
@@ -153,6 +232,11 @@
     loader.onload = function () {
       pgmImg.src = programUrl;
       pgmImg.classList.add('visible');
+      fitContainerToAspectRatio(pgmImg.parentElement, loader);
+    };
+    loader.onerror = function () {
+      pgmPlaceholder.classList.remove('hidden');
+      pgmPlaceholder.textContent = 'Load failed';
     };
     loader.src = programUrl;
     pgmFilename.textContent = previewFilename.textContent;
@@ -173,6 +257,7 @@
     pgmPlaceholder.classList.remove('hidden');
     pgmPlaceholder.textContent = 'BLACK';
     pgmFilename.textContent = '';
+    clearContainerFit(pgmImg.parentElement);
     if (currentOnAirEl) {
       currentOnAirEl.classList.remove('on-air');
       currentOnAirEl = null;
@@ -277,6 +362,7 @@
         previewImg.classList.remove('visible');
         previewPlaceholder.classList.remove('hidden');
         previewFilename.textContent = '';
+        clearContainerFit(previewImg.parentElement);
         if (currentSelectedEl) {
           currentSelectedEl.classList.remove('selected');
           currentSelectedEl = null;
@@ -400,6 +486,7 @@
           document.body.classList.remove(cls);
           handle.classList.remove('active');
           saveSizes();
+          refitAllContainers();
         }
 
         document.addEventListener('mousemove', onMove);
@@ -438,6 +525,7 @@
           var total = previewSection.offsetHeight + pgmSection.offsetHeight;
           if (total > 0) applyVerticalRatio(previewSection.offsetHeight / total);
         }
+        refitAllContainers();
       });
     });
 

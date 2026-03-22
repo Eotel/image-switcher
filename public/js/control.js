@@ -95,25 +95,21 @@
     applyContainerFit(container, ratio);
   }
 
+  var DEFAULT_RATIO = 16 / 9;
+
   function clearContainerFit(container) {
-    container.style.width = '';
-    container.style.height = '';
-    container.style.flex = '';
+    fitContainerToAspectRatio(container, DEFAULT_RATIO);
   }
 
   // Batches write-read-write to minimise forced reflows:
   // 1. reset all → 2. measure all → 3. apply all
   function refitAllContainers() {
-    var targets = [];
-    if (previewImg.classList.contains('visible')) {
-      var r = getRatio(previewImg);
-      if (r && isFinite(r)) targets.push({ container: previewImg.parentElement, ratio: r });
-    }
-    if (pgmImg.classList.contains('visible')) {
-      var r2 = getRatio(pgmImg);
-      if (r2 && isFinite(r2)) targets.push({ container: pgmImg.parentElement, ratio: r2 });
-    }
-    if (targets.length === 0) return;
+    var prevRatio = previewImg.classList.contains('visible') ? getRatio(previewImg) : 0;
+    var pgmRatio = pgmImg.classList.contains('visible') ? getRatio(pgmImg) : 0;
+    var targets = [
+      { container: previewImg.parentElement, ratio: prevRatio && isFinite(prevRatio) ? prevRatio : DEFAULT_RATIO },
+      { container: pgmImg.parentElement, ratio: pgmRatio && isFinite(pgmRatio) ? pgmRatio : DEFAULT_RATIO }
+    ];
     // batch reset (writes)
     for (var i = 0; i < targets.length; i++) resetContainerForMeasure(targets[i].container);
     // batch measure + apply (reads then writes)
@@ -534,4 +530,5 @@
 
   init();
   initResizeHandles();
+  refitAllContainers();
 })();

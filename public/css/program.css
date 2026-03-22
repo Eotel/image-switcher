@@ -1,0 +1,37 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #000;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#program-img {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+#program-img.visible {
+  opacity: 1;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-family: system-ui, sans-serif;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+#overlay.hidden {
+  display: none;
+}

@@ -17,51 +17,69 @@ let thumbMiddleware = (_req, _res, next) => next();
 
 // --- Manifest & thumbnail helpers (parameterized) ---
 
-function buildManifest(imageRoot) {
-  const groups = [];
+const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
+const DEFAULT_SECTION = "(All)";
 
+function collectImages(dir, prefix) {
   let entries;
   try {
-    entries = fs
-      .readdirSync(imageRoot, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+    entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
-    return { groups: [] };
+    return [];
+  }
+  const results = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      results.push(...collectImages(path.join(dir, entry.name), rel));
+    } else if (IMAGE_RE.test(entry.name)) {
+      results.push(rel);
+    }
+  }
+  return results;
+}
+
+function jaSort(a, b) {
+  if (a === DEFAULT_SECTION) return -1;
+  if (b === DEFAULT_SECTION) return 1;
+  return a.localeCompare(b, "ja");
+}
+
+function buildManifest(imageRoot) {
+  const allPaths = collectImages(imageRoot, "");
+  if (allPaths.length === 0) return { groups: [] };
+
+  const groupMap = new Map();
+  for (const relPath of allPaths) {
+    const segments = relPath.split("/");
+    const filename = segments[segments.length - 1];
+    let groupName, categoryName;
+    if (segments.length === 1) {
+      groupName = DEFAULT_SECTION;
+      categoryName = DEFAULT_SECTION;
+    } else if (segments.length === 2) {
+      groupName = segments[0];
+      categoryName = DEFAULT_SECTION;
+    } else {
+      groupName = segments[0];
+      categoryName = segments.slice(1, -1).join(" / ");
+    }
+
+    if (!groupMap.has(groupName)) groupMap.set(groupName, new Map());
+    const catMap = groupMap.get(groupName);
+    if (!catMap.has(categoryName)) catMap.set(categoryName, []);
+    catMap.get(categoryName).push({ filename, path: relPath });
   }
 
-  for (const groupDir of entries) {
-    const groupPath = path.join(imageRoot, groupDir.name);
-    const categories = [];
-
-    const catEntries = fs
-      .readdirSync(groupPath, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .sort((a, b) => a.name.localeCompare(b.name, "ja"));
-
-    for (const catDir of catEntries) {
-      const catPath = path.join(groupPath, catDir.name);
-      const images = fs
-        .readdirSync(catPath)
-        .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
-        .sort()
-        .map((filename) => ({
-          filename,
-          path: `${groupDir.name}/${catDir.name}/${filename}`,
-        }));
-
-      if (images.length > 0) {
-        categories.push({ name: catDir.name, images });
-      }
-    }
-
-    if (categories.length > 0) {
-      groups.push({
-        name: groupDir.name,
-        index: groups.length + 1,
-        categories,
-      });
-    }
+  const groups = [];
+  for (const gName of [...groupMap.keys()].sort(jaSort)) {
+    const catMap = groupMap.get(gName);
+    const categories = [...catMap.keys()].sort(jaSort).map((cName) => ({
+      name: cName,
+      images: catMap.get(cName).sort((a, b) => a.filename.localeCompare(b.filename, "ja")),
+    }));
+    groups.push({ name: gName, index: groups.length + 1, categories });
   }
 
   return { groups };

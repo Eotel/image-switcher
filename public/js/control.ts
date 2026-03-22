@@ -186,20 +186,10 @@ function createKeyBadge(text: string): HTMLSpanElement {
   return span;
 }
 
-function buildEncodedPath(
-  prefix: string,
-  groupName: string,
-  categoryName: string,
-  filename: string,
-): string {
-  return (
-    prefix +
-    encodeURIComponent(groupName) +
-    "/" +
-    encodeURIComponent(categoryName) +
-    "/" +
-    encodeURIComponent(filename)
-  );
+const DEFAULT_SECTION = "(All)";
+
+function encodeRelativePath(prefix: string, relativePath: string): string {
+  return prefix + relativePath.split("/").map(encodeURIComponent).join("/");
 }
 
 function refreshVisibleThumbs(): void {
@@ -451,16 +441,20 @@ function renderGrid(): void {
     section.className = "group-section";
     section.dataset.group = group.name;
 
-    const groupHeader = document.createElement("div");
-    groupHeader.className = "group-header";
-    groupHeader.textContent = group.name;
-    section.appendChild(groupHeader);
+    if (group.name !== DEFAULT_SECTION) {
+      const groupHeader = document.createElement("div");
+      groupHeader.className = "group-header";
+      groupHeader.textContent = group.name;
+      section.appendChild(groupHeader);
+    }
 
     for (const category of group.categories) {
-      const catHeader = document.createElement("div");
-      catHeader.className = "category-header";
-      catHeader.textContent = category.name;
-      section.appendChild(catHeader);
+      if (category.name !== DEFAULT_SECTION) {
+        const catHeader = document.createElement("div");
+        catHeader.className = "category-header";
+        catHeader.textContent = category.name;
+        section.appendChild(catHeader);
+      }
 
       const row = document.createElement("div");
       row.className = "thumb-row";
@@ -468,16 +462,11 @@ function renderGrid(): void {
       for (const image of category.images) {
         const item = document.createElement("div");
         item.className = "thumb-item";
-        item.dataset.imageUrl = buildEncodedPath(
-          "/images/",
-          group.name,
-          category.name,
-          image.filename,
-        );
+        item.dataset.imageUrl = encodeRelativePath("/images/", image.path);
         item.dataset.group = group.name;
 
         const img = document.createElement("img");
-        img.src = buildEncodedPath("/thumbnails/", group.name, category.name, image.filename);
+        img.src = encodeRelativePath("/thumbnails/", image.path);
         img.alt = image.filename;
         img.loading = "lazy";
         item.appendChild(img);

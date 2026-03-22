@@ -24,6 +24,7 @@ interface Manifest {
 interface ViewPrefs {
   viewMode: "grid" | "list";
   thumbSize: number;
+  layoutMode: "vertical" | "horizontal";
 }
 
 interface Workspace {
@@ -50,6 +51,7 @@ let cachedVisibleThumbs: HTMLElement[] = [];
 let selectedIndex = -1;
 let currentSelectedEl: HTMLElement | null = null;
 let currentOnAirEl: HTMLElement | null = null;
+let resizeHandles: { restoreSizes: () => void } | null = null;
 
 const thumbGrid = document.getElementById("thumb-grid")!;
 const previewImg = document.getElementById("preview-img") as HTMLImageElement;
@@ -77,6 +79,7 @@ const browseList = document.getElementById("browse-list")!;
 const wsError = document.getElementById("ws-error")!;
 const btnViewGrid = document.getElementById("btn-view-grid")!;
 const btnViewList = document.getElementById("btn-view-list")!;
+const btnLayoutToggle = document.getElementById("btn-layout-toggle")!;
 const thumbSizeSlider = document.getElementById("thumb-size-slider") as HTMLInputElement;
 const thumbSizeLabel = document.getElementById("thumb-size-label")!;
 
@@ -89,6 +92,7 @@ function saveViewPrefs(): void {
     const prefs: ViewPrefs = {
       viewMode: gridArea.classList.contains("view-list") ? "list" : "grid",
       thumbSize: parseInt(thumbSizeSlider.value),
+      layoutMode: document.body.classList.contains("layout-horizontal") ? "horizontal" : "vertical",
     };
     localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
   } catch {
@@ -103,7 +107,7 @@ function loadViewPrefs(): ViewPrefs {
   } catch {
     /* localStorage unavailable */
   }
-  return { viewMode: "grid", thumbSize: 120 };
+  return { viewMode: "grid", thumbSize: 120, layoutMode: "vertical" };
 }
 
 function updateViewModeUI(isList: boolean): void {
@@ -114,11 +118,36 @@ function updateViewModeUI(isList: boolean): void {
   thumbSizeSlider.disabled = isList;
 }
 
+function setLayoutMode(mode: "vertical" | "horizontal"): void {
+  const isHorizontal = mode === "horizontal";
+  document.body.classList.toggle("layout-horizontal", isHorizontal);
+  btnLayoutToggle.classList.toggle("active", isHorizontal);
+
+  const monitors = document.getElementById("monitors")!;
+  const previewSection = document.getElementById("preview-section")!;
+  const pgmSection = document.getElementById("pgm-section")!;
+
+  if (isHorizontal) {
+    monitors.style.width = "";
+    monitors.style.minWidth = "";
+    previewSection.style.flex = "";
+    previewSection.style.height = "";
+    pgmSection.style.flex = "";
+    pgmSection.style.height = "";
+  } else {
+    monitors.style.height = "";
+  }
+
+  resizeHandles?.restoreSizes();
+  requestAnimationFrame(() => refitAllContainers());
+}
+
 function applyViewPrefs(prefs: ViewPrefs): void {
   updateViewModeUI(prefs.viewMode === "list");
   thumbSizeSlider.value = String(prefs.thumbSize);
   thumbSizeLabel.textContent = String(prefs.thumbSize);
   applyThumbSize(prefs.thumbSize);
+  setLayoutMode(prefs.layoutMode);
 }
 
 function applyThumbSize(size: number): void {
@@ -132,6 +161,11 @@ btnViewGrid.addEventListener("click", () => {
 });
 btnViewList.addEventListener("click", () => {
   updateViewModeUI(true);
+  saveViewPrefs();
+});
+btnLayoutToggle.addEventListener("click", () => {
+  const next = document.body.classList.contains("layout-horizontal") ? "vertical" : "horizontal";
+  setLayoutMode(next);
   saveViewPrefs();
 });
 
@@ -651,6 +685,15 @@ document.addEventListener("keydown", (e) => {
     case "B":
       blackOut();
       break;
+    case "l":
+    case "L": {
+      const next = document.body.classList.contains("layout-horizontal")
+        ? "vertical"
+        : "horizontal";
+      setLayoutMode(next);
+      saveViewPrefs();
+      break;
+    }
     case "Escape":
       clearPreview();
       break;
@@ -692,11 +735,13 @@ interface DragHandler<T> {
   move(snapshot: T, delta: number): void;
 }
 
-function initResizeHandles(): void {
+function initResizeHandles(): { restoreSizes: () => void } {
   const STORAGE_KEY = "image-switcher-pane-sizes";
   const MIN_LEFT_WIDTH = 240;
   const MAX_LEFT_WIDTH = 600;
   const MIN_SECTION_HEIGHT = 80;
+  const MIN_MONITOR_HEIGHT = 160;
+  const MIN_GRID_HEIGHT = 120;
 
   const monitors = document.getElementById("monitors")!;
   const previewSection = document.getElementById("preview-section")!;
@@ -733,28 +778,49 @@ function initResizeHandles(): void {
   function saveSizes(): void {
     try {
       const total = previewSection.offsetHeight + pgmSection.offsetHeight;
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          leftWidth: monitors.offsetWidth,
-          previewRatio: total > 0 ? previewSection.offsetHeight / total : 0.6,
-        }),
-      );
+      const saved: Record<string, number> = {
+        leftWidth: monitors.offsetWidth,
+        previewRatio: total > 0 ? previewSection.offsetHeight / total : 0.6,
+      };
+      if (document.body.classList.contains("layout-horizontal")) {
+        saved.monitorHeight = monitors.offsetHeight;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     } catch {
       /* localStorage unavailable */
     }
+  }
+
+  function setMonitorHeight(px: number): void {
+    monitors.style.height = px + "px";
   }
 
   function restoreSizes(): void {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
-      const sizes = JSON.parse(raw) as { leftWidth?: number; previewRatio?: number };
-      if (sizes.leftWidth) {
-        setMonitorWidth(Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, sizes.leftWidth)));
-      }
-      if (sizes.previewRatio) {
-        applyVerticalRatio(sizes.previewRatio);
+      const sizes = JSON.parse(raw) as {
+        leftWidth?: number;
+        previewRatio?: number;
+        monitorHeight?: number;
+      };
+      if (document.body.classList.contains("layout-horizontal")) {
+        if (sizes.monitorHeight) {
+          setMonitorHeight(
+            Math.max(
+              MIN_MONITOR_HEIGHT,
+              Math.min(window.innerHeight - MIN_GRID_HEIGHT, sizes.monitorHeight),
+            ),
+          );
+        }
+      } else {
+        monitors.style.height = "";
+        if (sizes.leftWidth) {
+          setMonitorWidth(Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, sizes.leftWidth)));
+        }
+        if (sizes.previewRatio) {
+          applyVerticalRatio(sizes.previewRatio);
+        }
       }
     } catch {
       /* ignore */
@@ -798,11 +864,41 @@ function initResizeHandles(): void {
     });
   }
 
-  createDragHandler(handleH, "h", {
-    init: () => monitors.offsetWidth,
-    move: (startWidth: number, delta: number) => {
-      setMonitorWidth(Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, startWidth + delta)));
-    },
+  handleH.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const isHoriz = document.body.classList.contains("layout-horizontal");
+    const startPos = isHoriz ? e.clientY : e.clientX;
+    const startVal = isHoriz ? monitors.offsetHeight : monitors.offsetWidth;
+    const cls = isHoriz ? "resizing-v" : "resizing-h";
+    document.body.classList.add(cls);
+    handleH.classList.add("active");
+    let rafId = 0;
+
+    function onMove(ev: MouseEvent): void {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const delta = (isHoriz ? ev.clientY : ev.clientX) - startPos;
+        if (isHoriz) {
+          const maxH = window.innerHeight - MIN_GRID_HEIGHT;
+          setMonitorHeight(Math.max(MIN_MONITOR_HEIGHT, Math.min(maxH, startVal + delta)));
+        } else {
+          setMonitorWidth(Math.max(MIN_LEFT_WIDTH, Math.min(MAX_LEFT_WIDTH, startVal + delta)));
+        }
+      });
+    }
+
+    function onUp(): void {
+      cancelAnimationFrame(rafId);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.classList.remove(cls);
+      handleH.classList.remove("active");
+      saveSizes();
+      refitAllContainers();
+    }
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   });
 
   createDragHandler(handleV, "v", {
@@ -837,6 +933,7 @@ function initResizeHandles(): void {
   });
 
   restoreSizes();
+  return { restoreSizes };
 }
 
 // --- Directory browser ---
@@ -936,6 +1033,6 @@ wsAddForm.addEventListener("submit", async (e) => {
 });
 
 void init();
-initResizeHandles();
+resizeHandles = initResizeHandles();
 refitAllContainers();
 applyViewPrefs(loadViewPrefs());

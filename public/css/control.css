@@ -49,6 +49,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 #workspace-selector {
@@ -90,6 +93,9 @@ body {
 #person-tabs {
   display: flex;
   gap: 4px;
+  overflow-x: auto;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .tab {
@@ -100,6 +106,7 @@ body {
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -125,6 +132,7 @@ body {
 #actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .action-btn {

@@ -21,6 +21,11 @@ interface Manifest {
   people: ManifestPerson[];
 }
 
+interface ViewPrefs {
+  viewMode: "grid" | "list";
+  thumbSize: number;
+}
+
 interface Workspace {
   id: string;
   name: string;
@@ -69,6 +74,74 @@ const wsBrowseDialog = document.getElementById("ws-browse-dialog") as HTMLDialog
 const browseCurrentPath = document.getElementById("browse-current-path")!;
 const browseList = document.getElementById("browse-list")!;
 const wsError = document.getElementById("ws-error")!;
+const btnViewGrid = document.getElementById("btn-view-grid")!;
+const btnViewList = document.getElementById("btn-view-list")!;
+const thumbSizeSlider = document.getElementById("thumb-size-slider") as HTMLInputElement;
+const thumbSizeLabel = document.getElementById("thumb-size-label")!;
+
+const VIEW_PREFS_KEY = "image-switcher-view-prefs";
+
+const THUMB_HEIGHT_RATIO = 2 / 3;
+
+function saveViewPrefs(): void {
+  try {
+    const prefs: ViewPrefs = {
+      viewMode: gridArea.classList.contains("view-list") ? "list" : "grid",
+      thumbSize: parseInt(thumbSizeSlider.value),
+    };
+    localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* localStorage unavailable */
+  }
+}
+
+function loadViewPrefs(): ViewPrefs {
+  try {
+    const raw = localStorage.getItem(VIEW_PREFS_KEY);
+    if (raw) return JSON.parse(raw) as ViewPrefs;
+  } catch {
+    /* localStorage unavailable */
+  }
+  return { viewMode: "grid", thumbSize: 120 };
+}
+
+function updateViewModeUI(isList: boolean): void {
+  gridArea.classList.toggle("view-grid", !isList);
+  gridArea.classList.toggle("view-list", isList);
+  btnViewGrid.classList.toggle("active", !isList);
+  btnViewList.classList.toggle("active", isList);
+  thumbSizeSlider.disabled = isList;
+}
+
+function applyViewPrefs(prefs: ViewPrefs): void {
+  updateViewModeUI(prefs.viewMode === "list");
+  thumbSizeSlider.value = String(prefs.thumbSize);
+  thumbSizeLabel.textContent = String(prefs.thumbSize);
+  applyThumbSize(prefs.thumbSize);
+}
+
+function applyThumbSize(size: number): void {
+  gridArea.style.setProperty("--thumb-width", size + "px");
+  gridArea.style.setProperty("--thumb-height", Math.round(size * THUMB_HEIGHT_RATIO) + "px");
+}
+
+btnViewGrid.addEventListener("click", () => {
+  updateViewModeUI(false);
+  saveViewPrefs();
+});
+btnViewList.addEventListener("click", () => {
+  updateViewModeUI(true);
+  saveViewPrefs();
+});
+
+let savePrefsTimer = 0;
+thumbSizeSlider.addEventListener("input", () => {
+  const size = parseInt(thumbSizeSlider.value);
+  thumbSizeLabel.textContent = String(size);
+  applyThumbSize(size);
+  clearTimeout(savePrefsTimer);
+  savePrefsTimer = window.setTimeout(saveViewPrefs, 300);
+});
 
 function createKeyBadge(text: string): HTMLSpanElement {
   const span = document.createElement("span");
@@ -495,8 +568,10 @@ function navigateThumbs(direction: "up" | "down" | "left" | "right"): void {
     if (!currentEl) {
       selectedIndex = 0;
     } else {
-      const thumbWidth = currentEl.offsetWidth + 6;
-      const cols = Math.floor((gridArea.clientWidth - 16) / thumbWidth) || 1;
+      const isListView = gridArea.classList.contains("view-list");
+      const cols = isListView
+        ? 1
+        : Math.floor((thumbGrid.clientWidth - 16) / (currentEl.offsetWidth + 6)) || 1;
 
       switch (direction) {
         case "right":
@@ -796,16 +871,11 @@ wsSelect.addEventListener("change", () => {
   void switchWorkspace(wsSelect.value);
 });
 
-document.getElementById("btn-ws-add")!.addEventListener("click", () => {
-  void renderWsDialog();
-  hideWsError();
-  wsDialog.showModal();
-});
-
 document.getElementById("btn-ws-manage")!.addEventListener("click", () => {
   void renderWsDialog();
   hideWsError();
   wsDialog.showModal();
+  wsNameInput.focus();
 });
 
 document.getElementById("btn-ws-close")!.addEventListener("click", () => {
@@ -856,3 +926,4 @@ wsAddForm.addEventListener("submit", async (e) => {
 void init();
 initResizeHandles();
 refitAllContainers();
+applyViewPrefs(loadViewPrefs());

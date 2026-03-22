@@ -12,8 +12,8 @@
   --text-dim: #888;
   --preview-border: #2a6;
   --pgm-border: #d33;
-  --take-bg: #c22;
-  --take-hover: #e33;
+  --action-bg: #c22;
+  --action-hover: #e33;
   --black-bg: #333;
   --tab-active: #3a3a3a;
   --thumb-selected: #2a6;
@@ -175,15 +175,34 @@ body {
 .black-btn:hover {
   background: #444;
 }
-.take-btn {
-  background: var(--take-bg);
-  padding: 8px 28px;
+.cut-btn {
+  background: var(--action-bg);
+  padding: 8px 24px;
   font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-.take-btn:hover {
-  background: var(--take-hover);
+.cut-btn:hover {
+  background: var(--action-hover);
+}
+.auto-btn {
+  background: #b80;
+  padding: 8px 20px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.auto-btn:hover {
+  background: #ca0;
+}
+.auto-duration-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 /* Workspace */
@@ -256,17 +275,29 @@ body {
   border: 2px solid var(--pgm-border);
 }
 
-#preview-img,
-#pgm-img {
+#preview-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: none;
 }
 
-#preview-img.visible,
-#pgm-img.visible {
+#preview-img.visible {
   display: block;
+}
+
+.pgm-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity var(--transition-duration, 0s) ease;
+}
+
+.pgm-layer.active {
+  opacity: 1;
 }
 
 #preview-placeholder,

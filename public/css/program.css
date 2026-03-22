@@ -11,15 +11,23 @@ body {
   height: 100vh;
 }
 
-#program-img {
+#program-stage {
+  position: relative;
   width: 100vw;
   height: 100vh;
-  object-fit: contain;
-  opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-#program-img.visible {
+.program-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity var(--transition-duration, 0s) ease;
+}
+
+.program-layer.active {
   opacity: 1;
 }
 

@@ -1,4 +1,4 @@
-import { CHANNEL_NAME, type ChannelMessage } from "./channel.ts";
+import { CHANNEL_NAME, type ChannelMessage, type TransitionType } from "./channel.ts";
 import { preloadImage } from "./image-utils.ts";
 
 interface ManifestImage {
@@ -25,6 +25,7 @@ interface ViewPrefs {
   viewMode: "grid" | "list";
   thumbSize: number;
   layoutMode: "vertical" | "horizontal";
+  autoDuration: number;
 }
 
 interface Workspace {
@@ -58,13 +59,19 @@ const previewImg = document.getElementById("preview-img") as HTMLImageElement;
 const previewPlaceholder = document.getElementById("preview-placeholder")!;
 const previewLoading = document.getElementById("preview-loading")!;
 const previewFilename = document.getElementById("preview-filename")!;
-const pgmImg = document.getElementById("pgm-img") as HTMLImageElement;
+const pgmImgA = document.getElementById("pgm-img-a") as HTMLImageElement;
+const pgmImgB = document.getElementById("pgm-img-b") as HTMLImageElement;
 const pgmPlaceholder = document.getElementById("pgm-placeholder")!;
 const pgmFilename = document.getElementById("pgm-filename")!;
 const groupTabs = document.getElementById("group-tabs")!;
 const toolbarLeft = document.getElementById("toolbar-left")!;
-const btnTake = document.getElementById("btn-take")!;
+const btnCut = document.getElementById("btn-cut")!;
+const btnAuto = document.getElementById("btn-auto")!;
+const autoDurationSelect = document.getElementById("auto-duration") as HTMLSelectElement;
 const btnBlack = document.getElementById("btn-black")!;
+let pgmActiveLayer: HTMLImageElement = pgmImgA;
+let pgmTransitionTimer: number | null = null;
+let pgmTransitionGen = 0;
 const btnOpenPgm = document.getElementById("btn-open-pgm")!;
 const gridArea = document.getElementById("grid-area")!;
 const wsSelect = document.getElementById("workspace-select") as HTMLSelectElement;
@@ -93,6 +100,7 @@ function saveViewPrefs(): void {
       viewMode: gridArea.classList.contains("view-list") ? "list" : "grid",
       thumbSize: parseInt(thumbSizeSlider.value),
       layoutMode: document.body.classList.contains("layout-horizontal") ? "horizontal" : "vertical",
+      autoDuration: parseInt(autoDurationSelect.value),
     };
     localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
   } catch {
@@ -107,7 +115,7 @@ function loadViewPrefs(): ViewPrefs {
   } catch {
     /* localStorage unavailable */
   }
-  return { viewMode: "grid", thumbSize: 120, layoutMode: "horizontal" };
+  return { viewMode: "grid", thumbSize: 120, layoutMode: "horizontal", autoDuration: 1000 };
 }
 
 function updateViewModeUI(isList: boolean): void {
@@ -149,6 +157,7 @@ function applyViewPrefs(prefs: ViewPrefs): void {
   thumbSizeLabel.textContent = String(prefs.thumbSize);
   applyThumbSize(prefs.thumbSize);
   setLayoutMode(prefs.layoutMode);
+  autoDurationSelect.value = String(prefs.autoDuration);
 }
 
 function applyThumbSize(size: number): void {
@@ -263,14 +272,15 @@ function clearContainerFit(container: HTMLElement): void {
 
 function refitAllContainers(): void {
   const prevRatio = previewImg.classList.contains("visible") ? getRatio(previewImg) : 0;
-  const pgmRatio = pgmImg.classList.contains("visible") ? getRatio(pgmImg) : 0;
+  const pgmLayer = pgmActiveLayer;
+  const pgmRatio = pgmLayer.classList.contains("active") ? getRatio(pgmLayer) : 0;
   const targets = [
     {
       container: previewImg.parentElement!,
       ratio: prevRatio && isFinite(prevRatio) ? prevRatio : DEFAULT_RATIO,
     },
     {
-      container: pgmImg.parentElement!,
+      container: pgmImgA.parentElement!,
       ratio: pgmRatio && isFinite(pgmRatio) ? pgmRatio : DEFAULT_RATIO,
     },
   ];
@@ -322,11 +332,21 @@ function clearPreviewAndProgram(): void {
   previewPlaceholder.classList.remove("hidden");
   previewFilename.textContent = "";
   clearContainerFit(previewImg.parentElement!);
-  pgmImg.classList.remove("visible");
+  if (pgmTransitionTimer !== null) {
+    clearTimeout(pgmTransitionTimer);
+    pgmTransitionTimer = null;
+  }
+  const pgmContainer = pgmImgA.parentElement!;
+  pgmContainer.style.setProperty("--transition-duration", "0s");
+  pgmImgA.classList.remove("active");
+  pgmImgB.classList.remove("active");
+  pgmImgA.removeAttribute("src");
+  pgmImgB.removeAttribute("src");
+  pgmActiveLayer = pgmImgA;
   pgmPlaceholder.classList.remove("hidden");
   pgmPlaceholder.textContent = "No output";
   pgmFilename.textContent = "";
-  clearContainerFit(pgmImg.parentElement!);
+  clearContainerFit(pgmContainer);
   if (currentSelectedEl) {
     currentSelectedEl.classList.remove("selected");
     currentSelectedEl = null;
@@ -519,17 +539,53 @@ function setPreview(imageUrl: string, filename: string): void {
   }
 }
 
-function take(): void {
+function finishPgmTransition(): void {
+  if (pgmTransitionTimer !== null) {
+    clearTimeout(pgmTransitionTimer);
+    pgmTransitionTimer = null;
+  }
+  const container = pgmImgA.parentElement!;
+  container.style.setProperty("--transition-duration", "0s");
+  pgmActiveLayer = pgmImgA.classList.contains("active") ? pgmImgA : pgmImgB;
+}
+
+function executeTake(transition: TransitionType, durationMs: number): void {
   if (!previewUrl) return;
 
   programUrl = previewUrl;
 
+  if (pgmTransitionTimer !== null) finishPgmTransition();
+
+  const gen = ++pgmTransitionGen;
+  const incoming = pgmActiveLayer === pgmImgA ? pgmImgB : pgmImgA;
+  const outgoing = pgmActiveLayer;
+  const container = incoming.parentElement!;
+
   pgmPlaceholder.classList.add("hidden");
   preloadImage(programUrl).then(
     (loaded) => {
-      pgmImg.src = loaded.src;
-      pgmImg.classList.add("visible");
-      fitContainerToAspectRatio(pgmImg.parentElement!, loaded);
+      if (gen !== pgmTransitionGen) return;
+      incoming.src = loaded.src;
+
+      if (transition === "cut") {
+        container.style.setProperty("--transition-duration", "0s");
+        incoming.classList.add("active");
+        outgoing.classList.remove("active");
+        pgmActiveLayer = incoming;
+      } else {
+        const durationS = durationMs / 1000;
+        container.style.setProperty("--transition-duration", `${durationS}s`);
+        void incoming.offsetWidth;
+        incoming.classList.add("active");
+        outgoing.classList.remove("active");
+        pgmTransitionTimer = window.setTimeout(() => {
+          if (gen !== pgmTransitionGen) return;
+          pgmActiveLayer = incoming;
+          pgmTransitionTimer = null;
+        }, durationMs);
+      }
+
+      fitContainerToAspectRatio(container, loaded);
     },
     () => {
       pgmPlaceholder.classList.remove("hidden");
@@ -545,7 +601,21 @@ function take(): void {
     currentOnAirEl = target;
   }
 
-  channel.postMessage({ type: "take", imageUrl: programUrl } satisfies ChannelMessage);
+  channel.postMessage({
+    type: "take",
+    imageUrl: programUrl,
+    transition,
+    durationMs,
+  } satisfies ChannelMessage);
+}
+
+function cut(): void {
+  executeTake("cut", 0);
+}
+
+function auto(): void {
+  const durationMs = parseInt(autoDurationSelect.value);
+  executeTake("auto", durationMs);
 }
 
 function clearPreview(): void {
@@ -563,16 +633,20 @@ function clearPreview(): void {
 
 function blackOut(): void {
   programUrl = null;
-  pgmImg.classList.remove("visible");
+  if (pgmTransitionTimer !== null) finishPgmTransition();
+  const container = pgmImgA.parentElement!;
+  container.style.setProperty("--transition-duration", "0s");
+  pgmImgA.classList.remove("active");
+  pgmImgB.classList.remove("active");
   pgmPlaceholder.classList.remove("hidden");
   pgmPlaceholder.textContent = "BLACK";
   pgmFilename.textContent = "";
-  clearContainerFit(pgmImg.parentElement!);
+  clearContainerFit(container);
   if (currentOnAirEl) {
     currentOnAirEl.classList.remove("on-air");
     currentOnAirEl = null;
   }
-  channel.postMessage({ type: "black" } satisfies ChannelMessage);
+  channel.postMessage({ type: "black", transition: "cut", durationMs: 0 } satisfies ChannelMessage);
 }
 
 function filterGroup(groupName: string): void {
@@ -641,7 +715,7 @@ thumbGrid.addEventListener("dblclick", (e) => {
   const item = (e.target as HTMLElement).closest<HTMLElement>(".thumb-item");
   if (!item) return;
   setPreview(item.dataset.imageUrl!, getThumbFilename(item));
-  take();
+  cut();
 });
 
 groupTabs.addEventListener("click", (e) => {
@@ -652,7 +726,9 @@ groupTabs.addEventListener("click", (e) => {
 
 groupTabs.addEventListener("scroll", updateTabsOverflow);
 
-btnTake.addEventListener("click", take);
+btnCut.addEventListener("click", cut);
+btnAuto.addEventListener("click", auto);
+autoDurationSelect.addEventListener("change", saveViewPrefs);
 btnBlack.addEventListener("click", blackOut);
 btnOpenPgm.addEventListener("click", () => {
   window.open("/program.html", "pgm-output", "width=1280,height=720");
@@ -667,9 +743,12 @@ document.addEventListener("keydown", (e) => {
 
   switch (e.key) {
     case " ":
+      e.preventDefault();
+      cut();
+      break;
     case "Enter":
       e.preventDefault();
-      take();
+      auto();
       break;
     case "b":
     case "B":

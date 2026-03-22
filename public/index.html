@@ -21,9 +21,15 @@
         <a href="about.html" class="action-btn pgm-btn" id="btn-about" title="About">ⓘ</a>
         <button id="btn-open-pgm" class="action-btn pgm-btn">Open PGM</button>
         <button id="btn-black" class="action-btn black-btn">BLACK<span class="key">B</span></button>
-        <button id="btn-take" class="action-btn take-btn">
-          TAKE<span class="key">Space</span>
-        </button>
+        <select id="auto-duration" class="auto-duration-select" title="AUTO transition duration">
+          <option value="500">0.5s</option>
+          <option value="1000" selected>1.0s</option>
+          <option value="1500">1.5s</option>
+          <option value="2000">2.0s</option>
+          <option value="3000">3.0s</option>
+        </select>
+        <button id="btn-auto" class="action-btn auto-btn">AUTO<span class="key">↵</span></button>
+        <button id="btn-cut" class="action-btn cut-btn">CUT<span class="key">Space</span></button>
       </div>
     </header>
 
@@ -42,7 +48,8 @@
         <div id="pgm-section">
           <div class="monitor-label on-air">PROGRAM</div>
           <div id="pgm-container">
-            <img id="pgm-img" alt="" />
+            <img id="pgm-img-a" class="pgm-layer" alt="" />
+            <img id="pgm-img-b" class="pgm-layer" alt="" />
             <div id="pgm-placeholder">No output</div>
           </div>
           <div id="pgm-filename"></div>

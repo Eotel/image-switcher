@@ -2,11 +2,19 @@
   "name": "image-switcher",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "licenses": "node scripts/generate-licenses.js",
+    "licenses:check": "license-checker-rseidelsohn --production --failOn 'GPL-2.0;GPL-3.0;AGPL-3.0'"
   },
   "dependencies": {
     "express": "^4.21.0",
     "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "lefthook": "^2.1.4",
+    "license-checker-rseidelsohn": "^4.4.2",
+    "license-report": "^6.8.2"
   }
 }

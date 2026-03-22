@@ -1,0 +1,4 @@
+pre-commit:
+  jobs:
+    - name: license-check
+      run: npx license-checker-rseidelsohn --production --failOn 'GPL-2.0;GPL-3.0;AGPL-3.0'

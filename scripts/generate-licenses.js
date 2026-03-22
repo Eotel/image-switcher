@@ -32,7 +32,7 @@ const dependencies = report.map((dep) => {
     if (files.length > 0) {
       licenseText = fs.readFileSync(path.join(pkgDir, files[0]), "utf8");
     }
-  } catch (_) {
+  } catch {
     /* no license file */
   }
 
@@ -50,7 +50,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"))
 let appLicenseText = "";
 try {
   appLicenseText = fs.readFileSync(path.join(ROOT, "LICENSE"), "utf8");
-} catch (_) {
+} catch {
   /* no license file */
 }
 
